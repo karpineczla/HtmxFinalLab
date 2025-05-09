@@ -2,6 +2,9 @@ const functions = require("firebase-functions");
 const axios = require("axios");
 const pug = require("pug");
 const path = require("path");
+const admin = require('firebase-admin');
+admin.initializeApp();
+
 const cors = require("cors")({
   origin: [
     "https://htmxfinal-ead24.web.app",
@@ -24,6 +27,9 @@ const cors = require("cors")({
   ]
 });
 
+
+
+const db = admin.firestore();
 const API_KEY = "31f7bb09b9c18597cb8d22156cb4a92e";
 
 exports.weather = functions.https.onRequest((req, res) => {
@@ -68,6 +74,28 @@ exports.weather = functions.https.onRequest((req, res) => {
     } catch (err) {
       console.error("Error fetching weather:", err.message);
       res.status(500).send("Weather fetch error");
+    }
+  });
+});
+
+exports.logWeather = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    const city = req.query.city || 'Missoula';
+    const weatherApiKey = '31f7bb09b9c18597cb8d22156cb4a92e'; 
+    const weatherApiUrl = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${weatherApiKey}`;
+
+    try {
+      const response = await fetch(weatherApiUrl);
+      const weatherData = await response.json();
+
+      // Log the weather data to databsae
+      const db = admin.firestore();
+      await db.collection('weatherLogs').add(weatherData);
+
+      res.status(200).json(weatherData); // Respond with the weather data
+    } catch (error) {
+      console.error('Error fetching weather data:', error);
+      res.status(500).send('Error fetching weather data');
     }
   });
 });
